@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aetherion Social</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .hidden { display: none; }
+    .post {
+      background: #222;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Aetherion</h1>
+
+  <div id="auth">
+    <input type="text" id="email" placeholder="Correo" />
+    <input type="password" id="password" placeholder="Contraseña" />
+    <button id="register">Registrarse</button>
+    <button id="login">Iniciar sesión</button>
+  </div>
+
+  <div id="main" class="hidden">
+    <button id="logout">Cerrar sesión</button>
+    <form id="post-form">
+      <input type="text" id="content" placeholder="¿Qué estás pensando?" required />
+      <button type="submit">Publicar</button>
+    </form>
+    <div id="post-list"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkZpVGO9FR926lAgarR7dNeHaxPu92TG4",
+      authDomain: "aetherion-61113.firebaseapp.com",
+      projectId: "aetherion-61113",
+      storageBucket: "aetherion-61113.firebasestorage.app",
+      messagingSenderId: "1073903755223",
+      appId: "1:1073903755223:web:f7cdad6a75f04092063592",
+      measurementId: "G-6G05T44FE0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const postsRef = collection(db, "posts");
+
+    const authDiv = document.getElementById("auth");
+    const mainDiv = document.getElementById("main");
+    const emailInput = document.getElementById("email");
+    const passInput = document.getElementById("password");
+    const registerBtn = document.getElementById("register");
+    const loginBtn = document.getElementById("login");
+    const logoutBtn = document.getElementById("logout");
+    const postForm = document.getElementById("post-form");
+    const contentInput = document.getElementById("content");
+    const postList = document.getElementById("post-list");
+
+    registerBtn.onclick = () => {
+      createUserWithEmailAndPassword(auth, emailInput.value, passInput.value)
+        .then(() => console.log("Registrado"))
+        .catch(e => alert(e.message));
+    };
+
+    loginBtn.onclick = () => {
+      signInWithEmailAndPassword(auth, emailInput.value, passInput.value)
+        .then(() => console.log("Logueado"))
+        .catch(e => alert(e.message));
+    };
+
+    logoutBtn.onclick = () => signOut(auth);
+
+    postForm.onsubmit = async (e) => {
+      e.preventDefault();
+      if (auth.currentUser) {
+        await addDoc(postsRef, {
+          user: auth.currentUser.email,
+          content: contentInput.value,
+          time: serverTimestamp()
+        });
+        contentInput.value = "";
+      }
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        authDiv.classList.add("hidden");
+        mainDiv.classList.remove("hidden");
+        const q = query(postsRef);
+        onSnapshot(q, (snapshot) => {
+          postList.innerHTML = "";
+          snapshot.forEach(doc => {
+            const post = doc.data();
+            const div = document.createElement("div");
+            div.className = "post";
+            div.innerHTML = `<strong>${post.user}</strong>: ${post.content}`;
+            postList.appendChild(div);
+          });
+        });
+      } else {
+        authDiv.classList.remove("hidden");
+        mainDiv.classList.add("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
